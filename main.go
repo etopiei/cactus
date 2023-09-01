@@ -16,17 +16,16 @@ func printIdInfo() {
 	fmt.Println("uciok")
 }
 
-func findMoveOnDepth(game *chess.Game, depth int, color chess.Color) int {
+func findMoveOnDepth(position *chess.Position, depth int, color chess.Color) int {
 	if depth == 0 {
-		return evaluatePosition(game, color)
+		return evaluatePosition(position, color)
 	}
 
 	worst := 10000
 
-	for _, move := range game.ValidMoves() {
-		newGame := game.Clone()
-		newGame.Move(move)
-		score := findMoveOnDepth(newGame, depth-1, color)
+	for _, move := range position.ValidMoves() {
+		newPosition := position.Update(move)
+		score := findMoveOnDepth(newPosition, depth-1, color)
 		if score < worst {
 			worst = score
 		}
@@ -34,27 +33,27 @@ func findMoveOnDepth(game *chess.Game, depth int, color chess.Color) int {
 	return worst
 }
 
-func findMove(game *chess.Game) string {
-	moves := game.ValidMoves()
+func findMove(position *chess.Position) chess.Move {
+	moves := position.ValidMoves()
 
 	// Here take the worst evaluation for the subtree of a move
 	// and take the best worst evaluation. (minimax)
 	best := -10000
 	var bestMove chess.Move
 
+	// TODO: Handle the case where there are no valid moves!
+	// At the moment this will just return an uninitialized 'bestMove'
+
 	for _, move := range moves {
-		newGame := game.Clone()
-		newGame.Move(move)
-		score := findMoveOnDepth(newGame, 3, game.Position().Turn())
+		newPosition := position.Update(move)
+		score := findMoveOnDepth(newPosition, 4, newPosition.Turn())
 		if score > best {
 			best = score
 			bestMove = *move
 		}
 	}
 
-	// Apply move and return it
-	game.Move(&bestMove)
-	return bestMove.S1().String() + bestMove.S2().String()
+	return bestMove
 }
 
 func pieceToValue(piece chess.Piece) int {
@@ -76,11 +75,10 @@ func pieceToValue(piece chess.Piece) int {
 	}
 }
 
-func evaluatePosition(game *chess.Game, evaluateFor chess.Color) int {
-	// TODO: Here we need more information than just pieces on the board
-	// We also need to consider if a position is checkmate
+func evaluatePosition(position *chess.Position, evaluateFor chess.Color) int {
+	// TODO: Make the evaluation function smarter
 	score := 0
-	for _, piece := range game.Position().Board().SquareMap() {
+	for _, piece := range position.Board().SquareMap() {
 		if piece.Color() == evaluateFor {
 			score += pieceToValue(piece)
 		} else {
@@ -120,12 +118,15 @@ func main() {
 			}
 
 			if commandParts[0] == "position" && len(commandParts) > 2 {
+				// TODO: Make this handle when the position is being set not added to
 				game.MoveStr(commandParts[len(commandParts)-1])
 			}
 
 			if commandParts[0] == "go" {
-				move := findMove(game)
-				fmt.Println("bestmove", move)
+				move := findMove(game.Position())
+				game.Move(&move)
+				moveStr := move.S1().String() + move.S2().String()
+				fmt.Println("bestmove", moveStr)
 			}
 		}
 	}
