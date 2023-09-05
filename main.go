@@ -11,43 +11,45 @@ import (
 )
 
 func printIdInfo() {
-	fmt.Println("id name cactus 0.1")
+	fmt.Println("id name cactus v0.2.0")
 	fmt.Println("id author etopiei (Lachlan Jacob)")
 	fmt.Println("uciok")
 }
 
-func findMoveOnDepth(position *chess.Position, depth int, color chess.Color) int {
+func orderMoves(moves []*chess.Move) []*chess.Move {
+	// POC with Random move ordering, but put this here for program structure
+	return moves
+}
+
+func findMoveOnDepth(position *chess.Position, depth int, alpha int, beta int) int {
 	if depth == 0 {
-		return evaluatePosition(position, color)
+		return evaluatePosition(position)
 	}
 
-	worst := 10000
-
-	for _, move := range position.ValidMoves() {
+	for _, move := range orderMoves(position.ValidMoves()) {
 		newPosition := position.Update(move)
-		score := findMoveOnDepth(newPosition, depth-1, color)
-		if score < worst {
-			worst = score
+		evaluation := -findMoveOnDepth(newPosition, depth-1, -beta, -alpha)
+		if evaluation >= beta {
+			return beta
 		}
+		alpha = max(evaluation, alpha)
 	}
-	return worst
+	return alpha
 }
 
 func findMove(position *chess.Position) chess.Move {
 	moves := position.ValidMoves()
 
-	// Here take the worst evaluation for the subtree of a move
-	// and take the best worst evaluation. (minimax)
-	best := -10000
-	var bestMove chess.Move
-
 	// TODO: Handle the case where there are no valid moves!
 	// At the moment this will just return an uninitialized 'bestMove'
 
+	best := -100000
+	var bestMove chess.Move
+
 	for _, move := range moves {
 		newPosition := position.Update(move)
-		score := findMoveOnDepth(newPosition, 4, newPosition.Turn())
-		if score > best {
+		score := -findMoveOnDepth(newPosition, 4, -10000, 100000)
+		if score >= best {
 			best = score
 			bestMove = *move
 		}
@@ -59,7 +61,7 @@ func findMove(position *chess.Position) chess.Move {
 func pieceToValue(piece chess.Piece) int {
 	switch piece.Type() {
 	case chess.King:
-		return 30
+		return 1000
 	case chess.Queen:
 		return 10
 	case chess.Rook:
@@ -75,11 +77,11 @@ func pieceToValue(piece chess.Piece) int {
 	}
 }
 
-func evaluatePosition(position *chess.Position, evaluateFor chess.Color) int {
-	// TODO: Make the evaluation function smarter
+func evaluatePosition(position *chess.Position) int {
+	// TODO: Fix this to return better evaluations
 	score := 0
 	for _, piece := range position.Board().SquareMap() {
-		if piece.Color() == evaluateFor {
+		if piece.Color() == position.Turn() {
 			score += pieceToValue(piece)
 		} else {
 			score -= pieceToValue(piece)
@@ -125,7 +127,10 @@ func main() {
 			if commandParts[0] == "go" {
 				move := findMove(game.Position())
 				game.Move(&move)
+
+				// TODO: Handle move string better (currently promotion doesn't work)
 				moveStr := move.S1().String() + move.S2().String()
+
 				fmt.Println("bestmove", moveStr)
 			}
 		}
