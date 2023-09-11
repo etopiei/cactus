@@ -11,7 +11,7 @@ import (
 )
 
 func printIdInfo() {
-	fmt.Println("id name cactus v0.2.0")
+	fmt.Println("id name cactus v0.3.0")
 	fmt.Println("id author etopiei (Lachlan Jacob)")
 	fmt.Println("uciok")
 }
@@ -61,30 +61,108 @@ func findMove(position *chess.Position) chess.Move {
 func pieceToValue(piece chess.Piece) int {
 	switch piece.Type() {
 	case chess.King:
-		return 1000
+		return 20000
 	case chess.Queen:
-		return 10
+		return 900
 	case chess.Rook:
-		return 5
+		return 500
 	case chess.Bishop:
-		return 3
+		return 330
 	case chess.Knight:
-		return 3
+		return 320
 	case chess.Pawn:
-		return 1
+		return 100
 	default:
 		return 0
 	}
 }
 
+func squareTableValue(piece chess.Piece, square chess.Square) int {
+	var boardIndex int
+	if piece.Color() == chess.White {
+		boardIndex = squareToIndex(square)
+	} else {
+		boardIndex = indexOfMirrorSquare(square)
+	}
+
+	switch piece.Type() {
+	case chess.Bishop:
+		return BISHOP[boardIndex]
+	case chess.King:
+		// TODO: Add midgame/endgame distinction with King
+		return KING_MIDGAME[boardIndex]
+	case chess.Pawn:
+		return PAWN[boardIndex]
+	case chess.Knight:
+		return KNIGHT[boardIndex]
+	case chess.Queen:
+		return QUEEN[boardIndex]
+	default:
+		return 0
+	}
+}
+
+func squareToXDirYDir(square chess.Square) (int, int) {
+	var xDir int
+	var yDir int
+	switch square.File() {
+	case chess.FileA:
+		xDir = 0
+	case chess.FileB:
+		xDir = 1
+	case chess.FileC:
+		xDir = 2
+	case chess.FileD:
+		xDir = 3
+	case chess.FileE:
+		xDir = 4
+	case chess.FileF:
+		xDir = 5
+	case chess.FileG:
+		xDir = 6
+	case chess.FileH:
+		xDir = 7
+	}
+
+	switch square.Rank() {
+	case chess.Rank1:
+		yDir = 0
+	case chess.Rank2:
+		yDir = 1
+	case chess.Rank3:
+		yDir = 2
+	case chess.Rank4:
+		yDir = 3
+	case chess.Rank5:
+		yDir = 4
+	case chess.Rank6:
+		yDir = 5
+	case chess.Rank7:
+		yDir = 6
+	case chess.Rank8:
+		yDir = 7
+	}
+
+	return xDir, yDir
+}
+
+func squareToIndex(square chess.Square) int {
+	xDir, yDir := squareToXDirYDir(square)
+	return (yDir * 8) + xDir
+}
+
+func indexOfMirrorSquare(square chess.Square) int {
+	xDir, yDir := squareToXDirYDir(square)
+	return (7 - xDir) + ((7 - yDir) * 8)
+}
+
 func evaluatePosition(position *chess.Position) int {
-	// TODO: Fix this to return better evaluations
 	score := 0
-	for _, piece := range position.Board().SquareMap() {
+	for square, piece := range position.Board().SquareMap() {
 		if piece.Color() == position.Turn() {
-			score += pieceToValue(piece)
+			score += pieceToValue(piece) + squareTableValue(piece, square)
 		} else {
-			score -= pieceToValue(piece)
+			score -= pieceToValue(piece) + squareTableValue(piece, square)
 		}
 	}
 	return score
